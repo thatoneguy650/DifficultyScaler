@@ -20,6 +20,7 @@ public class Main : Script
     private float PlayerWeaponDamageModifier = 7.0f;
     private float PlayerMeleeDamageModifier = 1.0f;
     private float PlayerHealthRechargeMultiplier = 0.75f;
+    private int GameTimeLastSet;
 
     private Keys EnableKey = Keys.F10;
     public bool DamageModifier { get; set; } = true;
@@ -34,7 +35,7 @@ public class Main : Script
     {
         KeyDown += OnKeyDown;
         Tick += OnTick;
-        Interval = 5000;
+        Interval = 1;
         Initialize();
     }
     private void Initialize()
@@ -50,7 +51,7 @@ public class Main : Script
             AIWeaponDamageModifier = float.Parse(MyIni.Read("AIWeaponDamageModifier"));
 
         if (!MyIni.KeyExists("AIMeleeDamageModifer"))
-            MyIni.Write("AIMeleeDamageModifer", PlayerWeaponDamageModifier.ToString());
+            MyIni.Write("AIMeleeDamageModifer", AIMeleeDamageModifer.ToString());
         else
             AIMeleeDamageModifer = float.Parse(MyIni.Read("AIMeleeDamageModifer"));
 
@@ -77,10 +78,15 @@ public class Main : Script
     }
     private void OnTick(object sender, EventArgs e)
     {
-        if (DamageModifier)
-            SetModifier(false);
-        else
-            ResetModifier(false);
+        if (Game.GameTime - GameTimeLastSet >= 5000)//Reset it every 5 seconds
+        {
+            if (DamageModifier)
+                SetModifier(false);
+            else
+                ResetModifier(false);
+
+            GameTimeLastSet = Game.GameTime;
+        }
     }
     private void OnKeyDown(object sender, KeyEventArgs e)//
     {
@@ -102,7 +108,7 @@ public class Main : Script
         Function.Call(Hash.SET_PLAYER_MELEE_WEAPON_DAMAGE_MODIFIER, Game.Player, PlayerMeleeDamageModifier);
         Function.Call(Hash.SET_PLAYER_HEALTH_RECHARGE_MULTIPLIER, Game.Player, PlayerHealthRechargeMultiplier);    
         if (ShowNotification)
-            RDR2.UI.Screen.ShowSubtitle(string.Format("AI Weapon Modifier: {0}; AI Melee Modifier {1}, Player Weapon Modifer {2}; Player Melee Modifier {3}; Player Recharge Rate {4}", AIWeaponDamageModifier, AIMeleeDamageModifer, PlayerWeaponDamageModifier, PlayerMeleeDamageModifier, PlayerHealthRechargeMultiplier));
+            RDR2.UI.Screen.ShowSubtitle(string.Format("AI Weapon Modifier: {0}; AI Melee Modifier {1}, Player Weapon Modifer {2}; Player Melee Modifier {3}; Player Health Recharge Rate {4}", AIWeaponDamageModifier, AIMeleeDamageModifer, PlayerWeaponDamageModifier, PlayerMeleeDamageModifier, PlayerHealthRechargeMultiplier));
     }
     private void ResetModifier(bool ShowNotification)
     {
@@ -112,6 +118,6 @@ public class Main : Script
         Function.Call(Hash.SET_PLAYER_MELEE_WEAPON_DAMAGE_MODIFIER, Game.Player, 1.0f);
         Function.Call(Hash.SET_PLAYER_HEALTH_RECHARGE_MULTIPLIER, Game.Player, 1.0f);     
         if (ShowNotification)
-            RDR2.UI.Screen.ShowSubtitle("Damage Modifier Disabled");
+            RDR2.UI.Screen.ShowSubtitle("Modifiers Disabled");
     }
 }

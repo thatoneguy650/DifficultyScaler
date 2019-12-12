@@ -52,6 +52,7 @@
   <ItemGroup>
     <Reference Include="ScriptHookRDRNetAPI">
       <HintPath>..\..\..\..\..\..\Program Files\Rockstar Games\Red Dead Redemption 2\ScriptHookRDRNetAPI.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
