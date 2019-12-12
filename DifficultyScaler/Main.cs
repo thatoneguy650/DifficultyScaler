@@ -15,16 +15,26 @@ using System.Windows.Input;
 
 public class Main : Script
 {
-    private float AIWeaponDamageModifier = 7.0f;
-    private float PlayerWeaponDamageModifier = 3.0f;
+    private float AIWeaponDamageModifier = 6.0f;
+    private float AIMeleeDamageModifer = 1.0f;
+    private float PlayerWeaponDamageModifier = 7.0f;
+    private float PlayerMeleeDamageModifier = 1.0f;
+    private float PlayerHealthRechargeMultiplier = 0.75f;
+
     private Keys EnableKey = Keys.F10;
     public bool DamageModifier { get; set; } = true;
- 
+
+    public enum CoreIndex
+    {
+        Health = 0,
+        Stamina = 1,
+        DeadEye = 2,
+    }
     public Main()
     {
         KeyDown += OnKeyDown;
         Tick += OnTick;
-        Interval = 500;
+        Interval = 5000;
         Initialize();
     }
     private void Initialize()
@@ -39,20 +49,38 @@ public class Main : Script
         else
             AIWeaponDamageModifier = float.Parse(MyIni.Read("AIWeaponDamageModifier"));
 
+        if (!MyIni.KeyExists("AIMeleeDamageModifer"))
+            MyIni.Write("AIMeleeDamageModifer", PlayerWeaponDamageModifier.ToString());
+        else
+            AIMeleeDamageModifer = float.Parse(MyIni.Read("AIMeleeDamageModifer"));
+
         if (!MyIni.KeyExists("PlayerWeaponDamageModifier"))
             MyIni.Write("PlayerWeaponDamageModifier", PlayerWeaponDamageModifier.ToString());
         else
             PlayerWeaponDamageModifier = float.Parse(MyIni.Read("PlayerWeaponDamageModifier"));
 
+        if (!MyIni.KeyExists("PlayerMeleeDamageModifier"))
+            MyIni.Write("PlayerMeleeDamageModifier", PlayerMeleeDamageModifier.ToString());
+        else
+            PlayerMeleeDamageModifier = float.Parse(MyIni.Read("PlayerMeleeDamageModifier"));
+
+        if (!MyIni.KeyExists("PlayerHealthRechargeMultiplier"))
+            MyIni.Write("PlayerHealthRechargeMultiplier", PlayerHealthRechargeMultiplier.ToString());
+        else
+            PlayerHealthRechargeMultiplier = float.Parse(MyIni.Read("PlayerHealthRechargeMultiplier"));
+
         if (!MyIni.KeyExists("EnableKey"))
             MyIni.Write("EnableKey", EnableKey.ToString());
         else
-            EnableKey = (Keys)Enum.Parse(typeof(Keys), MyIni.Read("EnableKey"), true);  
-    }
+            EnableKey = (Keys)Enum.Parse(typeof(Keys), MyIni.Read("EnableKey"), true);
 
+    }
     private void OnTick(object sender, EventArgs e)
     {
-
+        if (DamageModifier)
+            SetModifier(false);
+        else
+            ResetModifier(false);
     }
     private void OnKeyDown(object sender, KeyEventArgs e)//
     {
@@ -61,64 +89,29 @@ public class Main : Script
             DamageModifier = !DamageModifier;
             ReadCreateSettings();
             if (DamageModifier)
-                SetDamageModifier();
+                SetModifier(true);
             else
-                ResetDamageModifier();     
+                ResetModifier(true);     
         }
     }
-    private void SetDamageModifier()
+    private void SetModifier(bool ShowNotification)
     {
         Function.Call(Hash.SET_AI_WEAPON_DAMAGE_MODIFIER, AIWeaponDamageModifier);
+        Function.Call(Hash.SET_AI_MELEE_WEAPON_DAMAGE_MODIFIER, AIMeleeDamageModifer);
         Function.Call(Hash.SET_PLAYER_WEAPON_DAMAGE_MODIFIER, Game.Player, PlayerWeaponDamageModifier);
-        RDR2.UI.Screen.ShowSubtitle(string.Format("Damage Modifier AI: {0}, Player {1}", AIWeaponDamageModifier, PlayerWeaponDamageModifier));
+        Function.Call(Hash.SET_PLAYER_MELEE_WEAPON_DAMAGE_MODIFIER, Game.Player, PlayerMeleeDamageModifier);
+        Function.Call(Hash.SET_PLAYER_HEALTH_RECHARGE_MULTIPLIER, Game.Player, PlayerHealthRechargeMultiplier);    
+        if (ShowNotification)
+            RDR2.UI.Screen.ShowSubtitle(string.Format("AI Weapon Modifier: {0}; AI Melee Modifier {1}, Player Weapon Modifer {2}; Player Melee Modifier {3}; Player Recharge Rate {4}", AIWeaponDamageModifier, AIMeleeDamageModifer, PlayerWeaponDamageModifier, PlayerMeleeDamageModifier, PlayerHealthRechargeMultiplier));
     }
-    private void ResetDamageModifier()
+    private void ResetModifier(bool ShowNotification)
     {
         Function.Call(Hash.RESET_AI_WEAPON_DAMAGE_MODIFIER);
+        Function.Call(Hash.SET_AI_MELEE_WEAPON_DAMAGE_MODIFIER, 1.0f);
         Function.Call(Hash.SET_PLAYER_WEAPON_DAMAGE_MODIFIER, Game.Player, 1.0f);
-        RDR2.UI.Screen.ShowSubtitle("Damage Modifier Disabled");
-    }
-}
-class IniFile
-{
-    string Path;
-    string EXE = Assembly.GetExecutingAssembly().GetName().Name;
-
-    [DllImport("kernel32", CharSet = CharSet.Unicode)]
-    static extern long WritePrivateProfileString(string Section, string Key, string Value, string FilePath);
-
-    [DllImport("kernel32", CharSet = CharSet.Unicode)]
-    static extern int GetPrivateProfileString(string Section, string Key, string Default, StringBuilder RetVal, int Size, string FilePath);
-
-    public IniFile(string IniPath = null)
-    {
-        Path = new FileInfo(IniPath ?? EXE + ".ini").FullName.ToString();
-    }
-
-    public string Read(string Key, string Section = null)
-    {
-        var RetVal = new StringBuilder(255);
-        GetPrivateProfileString(Section ?? EXE, Key, "", RetVal, 255, Path);
-        return RetVal.ToString();
-    }
-
-    public void Write(string Key, string Value, string Section = null)
-    {
-        WritePrivateProfileString(Section ?? EXE, Key, Value, Path);
-    }
-
-    public void DeleteKey(string Key, string Section = null)
-    {
-        Write(Key, null, Section ?? EXE);
-    }
-
-    public void DeleteSection(string Section = null)
-    {
-        Write(null, null, Section ?? EXE);
-    }
-
-    public bool KeyExists(string Key, string Section = null)
-    {
-        return Read(Key, Section).Length > 0;
+        Function.Call(Hash.SET_PLAYER_MELEE_WEAPON_DAMAGE_MODIFIER, Game.Player, 1.0f);
+        Function.Call(Hash.SET_PLAYER_HEALTH_RECHARGE_MULTIPLIER, Game.Player, 1.0f);     
+        if (ShowNotification)
+            RDR2.UI.Screen.ShowSubtitle("Damage Modifier Disabled");
     }
 }
